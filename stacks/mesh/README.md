@@ -88,8 +88,9 @@ to the tunnel.
 - **Global options.** ACME pinned to Let's Encrypt, no internal-CA fallback: a sslip.io
   name gets a Let's Encrypt certificate or none.
 - **`(gateway_tls)`.** Serves the mesh certificate (`/certs/cert.pem`, `key.pem`, written
-  by the agent), which the gateways trust. It also restores `Host` from
-  `X-Original-Host`, because the CF worker rewrites `Host` to the box's IP name.
+  by the agent), which the gateways trust. The gateways send the original `Host`; no
+  header overrides it (the `X-Original-Host` restore of the CF worker era, retired
+  2026-11-16, is gone: a client could set it to pick the `Host` an app sees).
 - **The three root addresses**, nothing else.
 
 Everything else comes from container labels, via caddy-docker-proxy on the `pcs`
@@ -103,10 +104,10 @@ labels:
   caddy_0: app-${DOMAIN}                       # via the gateway — mesh cert
   caddy_0.import: gateway_tls
   caddy_0.reverse_proxy: "{{upstreams 8080}}"
-  caddy_1: app-${PUBLIC_IP_DASH}.${IP_ZONE}    # REQUIRED: what CF-worker traffic matches — mesh cert
+  caddy_1: app-${PUBLIC_IP_DASH}.${IP_ZONE}    # IP-encoded name, via our nameservers — mesh cert
   caddy_1.import: gateway_tls
   caddy_1.reverse_proxy: "{{upstreams 8080}}"
-  caddy_2: app-${PUBLIC_IP_DASH}.sslip.io      # direct, and the CF worker's fallback — Let's Encrypt, so no import
+  caddy_2: app-${PUBLIC_IP_DASH}.sslip.io      # direct — Let's Encrypt, so no import
   caddy_2.reverse_proxy: "{{upstreams 8080}}"
 ```
 
@@ -238,7 +239,7 @@ curl -s -D- -o /dev/null -H 'X-Mesh-Force: tunnel' -H 'X-Mesh-Trace: 1' https://
 | Caddy won't start: `Caddyfile … not a directory` | `compose up` ran before the file existed and Docker created a directory. `ensure-stack-up.sh` removes it and restores the file |
 | Root domain 502, every `<app>-${DOMAIN}` fine | `DEFAULT_SERVICE_HOST` is not on `pcs` (or a typo). `ensure-root-domain.sh` reports it |
 | Apex serves the wrong app, or both | A container claims a root address with a `caddy_*` label |
-| `<app>-${DOMAIN}` works via sslip.io but not via the domain | `caddy_1` (`${IP_ZONE}`) label missing, or `IP_ZONE` unset (`ensure-ip-zone.sh` fails). The CF worker routes on it |
+| `<app>-${PUBLIC_IP_DASH}.${IP_ZONE}` fails but sslip.io works | `caddy_1` (`${IP_ZONE}`) label missing, or `IP_ZONE` unset (`ensure-ip-zone.sh` fails). Until 2026-11-16 the CF worker routed `<app>-${DOMAIN}` on it; the gateways send `<app>-${DOMAIN}` itself (`caddy_0`) |
 | Caddyfile edit not picked up | It was replaced with `mv`: a single-file bind mount pins the inode. Copy in place |
 | Box goes dark ~10 min after an update | Agent/tunnel started with an empty `PROVIDER`; see the transition shim |
 | `no routes registered` | Bad `PROVIDER_STR` signature or backend down. `docker logs mesh-router-agent` |

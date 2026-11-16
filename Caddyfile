@@ -73,12 +73,6 @@ import /data/mesh-zone.caddy
 # (HTTP-01 through the Worker), filling the zone's 50/week. The internal issuer makes
 # those automated certificates local; cert0 is still the one served (any_tag cert0).
 (gateway_tls) {
-    # Restore original host when request comes through CF worker
-    # The CF worker may rewrite Host to an IP name for routing, but preserves
-    # the original nsl.sh domain in X-Original-Host. Restoring it ensures
-    # apps generate correct redirect URLs and cookie domains.
-    @has_original_host header X-Original-Host *
-    request_header @has_original_host Host {http.request.header.X-Original-Host}
     tls /certs/cert.pem /certs/key.pem {
         issuer internal
     }
