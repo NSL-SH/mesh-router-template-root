@@ -3,6 +3,8 @@
 
 set -e
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/library/log.sh"
+
 if [ -f /.dockerenv ]; then
     echo "Inside Docker - dev environment detected. Skipping."
     exit 0
@@ -14,5 +16,11 @@ if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; 
 fi
 
 echo "Docker not found, installing..."
-curl -fsSL https://get.docker.com | sh
+# Fetched to a file, then run: piped, a dropped download runs half a script.
+# get-docker.sh is re-runnable, and its apt steps hit the network too, so the
+# run is retried as well as the download.
+GET_DOCKER="$(mktemp)"
+trap 'rm -f "$GET_DOCKER"' EXIT
+retry_net "get.docker.com download" curl -fsSL --max-time 120 https://get.docker.com -o "$GET_DOCKER"
+retry_net "get-docker.sh" sh "$GET_DOCKER"
 echo "Docker installed: $(docker --version)"

@@ -137,7 +137,9 @@ fi
 # aborts mid-way leaving containers in `Created`, and install.sh has already taken
 # the stack down, so a hard exit here leaves the box with no routing at all. A
 # partial stack (caddy + tunnel up, one service missing) is far better than none.
-if docker compose up "${UP_ARGS[@]}"; then
+# `up` pulls anything the pull step did not get, so it meets the same flaky
+# registry: retried like the pull.
+if retry_net "mesh stack up" docker compose up "${UP_ARGS[@]}"; then
     echo "Containers started"
 else
     echo "ERROR: 'docker compose up' failed - starting the containers it did create so the box is not left dark"

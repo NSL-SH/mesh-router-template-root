@@ -29,7 +29,7 @@ SCRIPT_FILE="$SCRIPTS_DIR/self-check.sh"
 if ! command -v crontab >/dev/null 2>&1; then
     if command -v apt-get >/dev/null 2>&1; then
         echo "Installing cron..."
-        apt-get update -qq && apt-get install -y -qq cron
+        retry_net "apt-get update" apt-get update -qq && retry_net "apt-get install cron" apt-get install -y -qq cron
     else
         echo "ERROR: crontab not available and apt-get not found - install cron manually"
         exit 1

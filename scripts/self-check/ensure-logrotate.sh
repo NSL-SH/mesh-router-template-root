@@ -16,7 +16,7 @@ LOGROTATE_CONFIG="/etc/logrotate.d/mesh-router"
 if ! command -v logrotate >/dev/null 2>&1; then
     if command -v apt-get >/dev/null 2>&1; then
         echo "Installing logrotate..."
-        apt-get update -qq && apt-get install -y -qq logrotate
+        retry_net "apt-get update" apt-get update -qq && retry_net "apt-get install logrotate" apt-get install -y -qq logrotate
     else
         echo "WARN: logrotate not available and apt-get not found - skipping"
         exit 0

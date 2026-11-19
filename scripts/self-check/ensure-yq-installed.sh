@@ -62,7 +62,7 @@ URL="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/${YQ_BINARY
 TMP="$(mktemp)"
 
 echo "Installing yq ${YQ_VERSION} (${YQ_BINARY})..."
-if ! curl -fsSL --max-time 120 "$URL" -o "$TMP"; then
+if ! retry_net "yq download" curl -fsSL --max-time 120 "$URL" -o "$TMP"; then
     rm -f "$TMP"
     log_warn "Could not download yq from $URL; user-management verbs will be unavailable until the next run"
     exit 0

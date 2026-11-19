@@ -14,5 +14,5 @@ if [ ! -f "$APP_DIR/docker-compose.yml" ]; then
 fi
 
 cd "$APP_DIR"
-docker compose pull -q
+retry_net "mesh stack pull" docker compose pull -q
 echo "Images pulled"

@@ -557,7 +557,18 @@ mirror_scripts() {
 # Fetch the repo tarball and lay down template/, scripts/, and compose.
 download_template() {
   local tmp; tmp=$(mktemp -d)
-  curl -fsSL --max-time 120 "$TARBALL_URL" -o "$tmp/template.tar.gz"
+  # 5 tries with backoff, each failure said out loud (same wording as retry_net in
+  # scripts/library/log.sh, which this standalone script cannot source yet).
+  local attempt=1 backoff=5
+  until curl -fsSL --max-time 120 "$TARBALL_URL" -o "$tmp/template.tar.gz"; do
+    if [[ "$attempt" -ge 5 ]]; then
+      echo "Error: template download failed after $attempt attempts ($TARBALL_URL)" >&2
+      rm -rf "$tmp"
+      exit 1
+    fi
+    echo "WARN: retry: template download failed (attempt $attempt/5), retrying in ${backoff}s" >&2
+    sleep "$backoff"; backoff=$((backoff * 2)); attempt=$((attempt + 1))
+  done
   mkdir -p "$tmp/extract"
   tar -xzf "$tmp/template.tar.gz" -C "$tmp/extract"
   local src; src=$(find "$tmp/extract" -mindepth 1 -maxdepth 1 -type d | head -n1)

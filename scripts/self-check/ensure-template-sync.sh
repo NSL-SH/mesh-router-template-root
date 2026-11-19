@@ -59,7 +59,7 @@ cleanup() { rm -rf "$TMP_DIR" "${TEMPLATE_DIR}.new" "${TEMPLATE_DIR}.old"; }
 trap cleanup EXIT
 
 echo "Downloading template from $TARBALL_URL"
-curl -fsSL --max-time 120 "$TARBALL_URL" -o "$TMP_DIR/template.tar.gz"
+retry_net "template download" curl -fsSL --max-time 120 "$TARBALL_URL" -o "$TMP_DIR/template.tar.gz"
 
 mkdir -p "$TMP_DIR/extract"
 tar -xzf "$TMP_DIR/template.tar.gz" -C "$TMP_DIR/extract"

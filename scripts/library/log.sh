@@ -78,6 +78,36 @@ log_debug() {
     fi
 }
 
+# Retry a network-bound command (pull, download, apt) with backoff.
+# Usage: retry_net "<what>" <command> [args...]
+#
+# Registry blobs, GitHub release downloads and the Contabo network drop single
+# requests often enough that a one-shot call fails whole provisions (ghcr
+# `httpReadSeeker: failed open` killed the mesh stack pull on prod demo1,
+# 2026-11-17 and 2026-11-19). Every failed attempt prints a `WARN: retry` line —
+# execute_script_display echoes those even when the step ends ✓, so a flaky
+# network shows up in the install output instead of hiding behind a green tick.
+# RETRY_NET_ATTEMPTS / RETRY_NET_BACKOFF override the defaults (5 tries, 5 s
+# doubling to 60 s). Returns the last exit code when every attempt failed.
+retry_net() {
+    local what="$1"; shift
+    local max="${RETRY_NET_ATTEMPTS:-5}" backoff="${RETRY_NET_BACKOFF:-5}"
+    local attempt=1 rc=0
+    while :; do
+        rc=0
+        "$@" || rc=$?
+        [ "$rc" -eq 0 ] && return 0
+        if [ "$attempt" -ge "$max" ]; then
+            log_error "retry: $what failed after $attempt attempts (exit $rc)"
+            return "$rc"
+        fi
+        log_warn "WARN: retry: $what failed (attempt $attempt/$max, exit $rc), retrying in ${backoff}s"
+        sleep "$backoff"
+        backoff=$((backoff * 2)); [ "$backoff" -gt 60 ] && backoff=60
+        attempt=$((attempt + 1))
+    done
+}
+
 # =================================================================
 # SCRIPT EXECUTION FUNCTIONS
 # =================================================================
@@ -180,6 +210,8 @@ execute_script_display() {
     if [ "$exit_code" -eq 0 ]; then
         printf '✓ (%ss)\n' "$duration"
         log_to_file_only "SUCCESS" "=== [$end_datetime] $script_name : success (${duration}s) ==="
+        # A step that only succeeded after retrying still says so (see retry_net).
+        grep '^WARN: retry' "$out_file" | sed 's/^/      ! /' || true
     else
         printf '✗ FAILED (exit %s, %ss)\n' "$exit_code" "$duration"
         log_to_file_only "ERROR" "=== [$end_datetime] $script_name : failed (exit code: $exit_code, ${duration}s) ==="
