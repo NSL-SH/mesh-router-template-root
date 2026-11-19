@@ -57,7 +57,7 @@ services:
       - mesh-router-caddy
 
   mesh-router-agent:
-    image: ghcr.io/nsl-sh/mesh-router-agent:1.4.0
+    image: ghcr.io/nsl-sh/mesh-router-agent:1.4.1
     container_name: mesh-router-agent
     hostname: mesh-router-agent
     cpu_shares: 90
