@@ -35,15 +35,22 @@ SERVICE_PORT="$(get_env_value DEFAULT_SERVICE_PORT)"
 # Probe the local Caddy directly rather than resolving ${DOMAIN} over the internet:
 # this must report on THIS box's routing, not on the gateway, DNS propagation or the
 # tunnel — all of which have their own checks and their own failure modes.
+# Nothing on :443 (000) gets more attempts than a 5xx: a Caddy still starting or restarting
+# right after the stacks came up refuses connections for a while (a staging create
+# 2026-11-18 failed here on three refusals in 21 s).
 CODE=""
-for attempt in 1 2 3; do
+attempt=1
+while :; do
     CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 \
         -H "Host: $DOMAIN" https://127.0.0.1/ 2>/dev/null) || CODE="000"
     case "$CODE" in
-        502|503|504|000) ;;   # upstream unreachable — the service may still be starting
+        000) max=8 ;;           # no listener yet: up to ~70 s
+        502|503|504) max=3 ;;   # upstream unreachable — the service may still be starting
         *) break ;;
     esac
-    [ "$attempt" -lt 3 ] && sleep 10
+    [ "$attempt" -ge "$max" ] && break
+    sleep 10
+    attempt=$((attempt + 1))
 done
 
 case "$CODE" in
@@ -63,6 +70,8 @@ case "$CODE" in
         ;;
     000)
         echo "ERROR: local Caddy did not answer on :443 — mesh-router-caddy is down or not bound."
+        echo "  mesh-router-caddy: $(docker inspect -f '{{.State.Status}} (restarts {{.RestartCount}}, started {{.State.StartedAt}})' mesh-router-caddy 2>/dev/null || echo 'no such container')"
+        docker logs --tail 15 mesh-router-caddy 2>&1 | sed 's/^/  | /' || true
         exit 1
         ;;
 esac
