@@ -435,13 +435,26 @@ fi
 # and that has to win over whatever the box already recorded. This is the one
 # deliberate divergence from common.sh's mesh_template_url(), which sees .env
 # already sourced into its environment and so cannot tell the two rungs apart.
+#
+# A channel name expands against MESH_REPO_URL (environment > .env > the default
+# repo), the same key scripts/library/common.sh reads.
+MESH_REPO_URL="${MESH_REPO_URL:-$(env_get MESH_REPO_URL)}"
+MESH_REPO_URL="${MESH_REPO_URL:-https://github.com/yundera/mesh-router-template-root}"
+MESH_REPO_URL="${MESH_REPO_URL%/}"
+MESH_REPO_URL="${MESH_REPO_URL%.git}"
+if [[ ! "$MESH_REPO_URL" =~ ^https://[A-Za-z0-9._/-]+$ ]]; then
+  echo "Error: MESH_REPO_URL is invalid (environment or ${ENV_SRC:-.env})." >&2
+  echo "       Got: $MESH_REPO_URL" >&2
+  echo "       Expected a repo URL like https://github.com/<owner>/mesh-router-template-root." >&2
+  exit 1
+fi
 TARBALL_URL="$UPDATE_URL_ARG"
-[[ -z "$TARBALL_URL" && -n "$CHANNEL_ARG" ]] && TARBALL_URL="https://github.com/yundera/mesh-router-template-root/archive/refs/heads/${CHANNEL_ARG}.tar.gz"
+[[ -z "$TARBALL_URL" && -n "$CHANNEL_ARG" ]] && TARBALL_URL="$MESH_REPO_URL/archive/refs/heads/${CHANNEL_ARG}.tar.gz"
 [[ -z "$TARBALL_URL" ]] && TARBALL_URL="${UPDATE_URL:-}"
 [[ -z "$TARBALL_URL" ]] && TARBALL_URL="${MESH_TEMPLATE_URL:-}"
 [[ -z "$TARBALL_URL" ]] && TARBALL_URL="$(env_get UPDATE_URL)"
 [[ -z "$TARBALL_URL" ]] && TARBALL_URL="$(env_get MESH_TEMPLATE_URL)"
-[[ -z "$TARBALL_URL" ]] && TARBALL_URL="https://github.com/yundera/mesh-router-template-root/archive/refs/heads/${CHANNEL}.tar.gz"
+[[ -z "$TARBALL_URL" ]] && TARBALL_URL="$MESH_REPO_URL/archive/refs/heads/${CHANNEL}.tar.gz"
 
 if [[ "$TARBALL_URL" == *.zip ]]; then
   die_bad_arg update-url "$TARBALL_URL" \

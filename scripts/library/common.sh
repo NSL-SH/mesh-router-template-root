@@ -515,8 +515,18 @@ stack_compose() {
 
 # Default branch when nothing is configured.
 MESH_DEFAULT_CHANNEL="stable"
+# The GitHub repo a channel name expands to. MESH_REPO_URL in .env (or the
+# environment) replaces it — for the move of this repo between GitHub orgs, or a
+# fork that wants its channel names to mean its own branches. Mirrored in
+# install.sh, install.ps1 and Mesh Console (internal/update).
+MESH_REPO_URL_DEFAULT="https://github.com/yundera/mesh-router-template-root"
+mesh_repo_url() {
+    local u="${MESH_REPO_URL:-$MESH_REPO_URL_DEFAULT}"
+    u="${u%/}"
+    printf '%s\n' "${u%.git}"
+}
 mesh_channel_url() {
-    printf 'https://github.com/yundera/mesh-router-template-root/archive/refs/heads/%s.tar.gz\n' "$1"
+    printf '%s/archive/refs/heads/%s.tar.gz\n' "$(mesh_repo_url)" "$1"
 }
 
 # Resolve the template tarball URL.

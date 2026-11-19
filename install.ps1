@@ -101,9 +101,17 @@ if (-not $Provider -or -not $Domain) {
 # $RepoBase is the jsDelivr base this run downloads from; $UpdateUrl is what gets
 # recorded in .env. They are normally two views of the same branch, and are only
 # allowed to diverge when .env holds a URL that names no branch at all.
+# A channel name expands against MESH_REPO_URL (environment > .env > the default
+# repo), the same key scripts/library/common.sh reads. GitHub only: the jsDelivr
+# base is derived from its owner/name.
+$RepoUrl = $env:MESH_REPO_URL
+if (-not $RepoUrl) { $RepoUrl = Get-Existing 'MESH_REPO_URL' }
+if (-not $RepoUrl) { $RepoUrl = "https://github.com/yundera/mesh-router-template-root" }
+$RepoUrl = $RepoUrl.TrimEnd('/') -replace '\.git$', ''
+$RepoPath = $RepoUrl -replace '^https://github\.com/', ''
 $UpdateUrl = ""
 if ($Channel) {
-    $UpdateUrl = "https://github.com/yundera/mesh-router-template-root/archive/refs/heads/$Channel.tar.gz"
+    $UpdateUrl = "$RepoUrl/archive/refs/heads/$Channel.tar.gz"
 } else {
     $recorded = Get-Existing 'UPDATE_URL'
     if (-not $recorded) { $recorded = Get-Existing 'MESH_TEMPLATE_URL' }
@@ -121,11 +129,11 @@ if ($Channel) {
         }
     } else {
         $Channel = "stable"
-        $UpdateUrl = "https://github.com/yundera/mesh-router-template-root/archive/refs/heads/stable.tar.gz"
+        $UpdateUrl = "$RepoUrl/archive/refs/heads/stable.tar.gz"
     }
 }
 
-$RepoBase = "https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@$Channel"
+$RepoBase = "https://cdn.jsdelivr.net/gh/$RepoPath@$Channel"
 $InstallDir = "$DataRoot/AppData/mesh"
 
 # Confirm an update that was asked for with no parameters. Deliberately not a

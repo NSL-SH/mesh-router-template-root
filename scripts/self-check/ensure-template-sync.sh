@@ -156,6 +156,20 @@ cp "$TEMPLATE_DIR/Caddyfile" "$MESH_ROOT/Caddyfile"
 
 cp "$TEMPLATE_DIR/docker-compose.yml" "$APP_DIR/docker-compose.yml"
 
+# The stack's tile icon, as `.icon.png` beside its compose: Maison draws a managed
+# app's tile from that file (internal/apps/icon.go), and the compose carries no
+# `icon:` URL any more — it pointed at this repo on jsDelivr, so it would have
+# broken with any move of the repo. Same rule as deploy-stack.sh's 1b. Cosmetic: a
+# failed copy fails nothing.
+if [ -f "$TEMPLATE_DIR/icon.png" ] && ! cmp -s "$TEMPLATE_DIR/icon.png" "$APP_DIR/.icon.png"; then
+    rm -f "$APP_DIR"/.icon.*
+    if cp "$TEMPLATE_DIR/icon.png" "$APP_DIR/.icon.png"; then
+        chown "${PUID:-1000}:${PGID:-1000}" "$APP_DIR/.icon.png" 2>/dev/null || true
+    else
+        echo "WARN: could not copy the mesh stack icon"
+    fi
+fi
+
 # The mesh stack's README beside its live compose file — the other stacks get theirs
 # from deploy-stack.sh. Its source sits under stacks/mesh/ because the repo root's
 # README.md is the installer's. Documentation only: a failed copy fails nothing.

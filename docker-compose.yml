@@ -263,7 +263,7 @@ services:
       pcs: null
 
   mesh-console-app:
-    image: ghcr.io/nsl-sh/mesh-console:1.18.0
+    image: ghcr.io/nsl-sh/mesh-console:1.19.0
     container_name: mesh-console-app
     hostname: mesh-console-app
     restart: unless-stopped
@@ -349,7 +349,8 @@ x-compose-app:
   # template rather than restored. `skip` also closes the manual Backups-tab path.
   backup:
     skip: true
-  icon: https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@main/icon.png
+  # No `icon:`: the tile is drawn from `.icon.png`, which ensure-template-sync.sh
+  # copies in from icon.png.
   webui-host: mesh-console-${DOMAIN}
   webui-scheme: https
   webui-path: /
@@ -382,6 +383,5 @@ x-casaos:
       with automatic SSL, the mail relay, and Mesh Console, the stack's web UI
       (status, routing, updates, root-domain app). SSO (Dex/Authelia) is the
       separate `auth` stack.
-  icon: https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@main/icon.png
   tagline:
     en_us: Secure mesh networking for your Personal Cloud Server
