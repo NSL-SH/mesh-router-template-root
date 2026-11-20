@@ -14,7 +14,7 @@
 # pipeline as a transient systemd unit (mesh-migrate) and returns, so neither an
 # SSH session nor the mesh-console container is needed while it runs.
 #
-# NOTHING IS RUN ON THE TARGET TO PREPARE IT. The target is any Ubuntu machine the
+# NOTHING IS RUN ON THE TARGET TO PREPARE IT. The target is any Ubuntu or Debian machine the
 # user (or an operator) already put in the required state: an account that accepts
 # this box's migration key (`migrate.sh key`) and has passwordless sudo, rsync, the
 # disk space, and no box on it yet. `preflight` checks all of it and changes nothing.
@@ -299,8 +299,12 @@ run_preflight() {
     # shellcheck disable=SC1091
     os="$(. /etc/os-release 2>/dev/null; echo "${ID:-unknown}")"
     ver="$(. /etc/os-release 2>/dev/null; echo "${VERSION_ID:-}")"
-    if [ "$os" = "ubuntu" ]; then check source_os ok "Ubuntu $ver"
-    else check source_os fail "This box runs '$os'; only Ubuntu is supported"; fi
+    # Ubuntu and Debian both: only DATA_ROOT travels, and the target's own
+    # self-check installs Docker and the rest for its distro.
+    case "$os" in
+        ubuntu|debian) check source_os ok "$os $ver" ;;
+        *)             check source_os fail "This box runs '$os'; only Ubuntu and Debian are supported" ;;
+    esac
 
     # common.sh keeps the .env at /DATA/AppData/mesh whatever DATA_ROOT says; a
     # box whose data root is elsewhere would not carry its identity in the copy.
@@ -348,12 +352,18 @@ run_preflight() {
     fi
     while IFS='=' read -r key val; do [ -n "$key" ] && T[$key]="$val"; done <<<"$out"
 
-    if [ "${T[os]:-}" = "ubuntu" ]; then
-        if [ "${T[os_version]:-}" = "$ver" ]; then check target_os ok "Ubuntu ${T[os_version]}"
-        else check target_os warn "Ubuntu ${T[os_version]:-?} (this box: $ver)"; fi
-    else
-        check target_os fail "The target runs '${T[os]:-unknown}'; only Ubuntu is supported"
-    fi
+    # A different distro or release is expected (an Ubuntu box moving to a
+    # Debian host) and only worth a warning; an unsupported one is a stop.
+    case "${T[os]:-}" in
+        ubuntu|debian)
+            if [ "${T[os]}" = "$os" ] && [ "${T[os_version]:-}" = "$ver" ]; then
+                check target_os ok "${T[os]} ${T[os_version]}"
+            else
+                check target_os warn "${T[os]} ${T[os_version]:-?} (this box: $os $ver)"
+            fi ;;
+        *)
+            check target_os fail "The target runs '${T[os]:-unknown}'; only Ubuntu and Debian are supported" ;;
+    esac
 
     if [ "${T[arch]:-}" = "$(uname -m)" ]; then check target_arch ok "${T[arch]}"
     else check target_arch warn "${T[arch]:-?} (this box: $(uname -m)): images are re-pulled, apps without one for that architecture will not start"; fi

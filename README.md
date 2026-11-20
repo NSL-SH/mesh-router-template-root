@@ -388,7 +388,7 @@ sudo bash /DATA/AppData/mesh/scripts/tools/migrate.sh log -f                    
 
 **The target is yours to prepare; nothing is installed on it beforehand.** `preflight` checks:
 
-- Ubuntu, reachable over SSH from this box
+- Ubuntu or Debian, reachable over SSH from this box
 - an account (`migration` by convention) with the key from step 1 in its
   `~/.ssh/authorized_keys` and passwordless sudo (`<user> ALL=(ALL) NOPASSWD:ALL`)
 - `rsync` installed

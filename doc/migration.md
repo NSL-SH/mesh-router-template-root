@@ -110,7 +110,7 @@ Preflight checks each item and reports every failure, not just the first one.
 
 | Requirement | Check |
 |---|---|
-| Ubuntu, same release family as the source (other Linux: out of scope for now) | `/etc/os-release` over SSH |
+| Ubuntu or Debian; a different distro or release than the source is a warning (other Linux: out of scope) | `/etc/os-release` over SSH |
 | sshd reachable from the source | connect with the migration key, `BatchMode=yes` |
 | an account (any name, `migration` by convention) with the source's **migration public key** in `authorized_keys` | same connection |
 | passwordless sudo for that account | `sudo -n true` |
