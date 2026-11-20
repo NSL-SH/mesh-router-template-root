@@ -177,7 +177,7 @@ services:
       pcs: null
 
   # =============================================================================
-  # MESH CONSOLE - the stack's web UI (github.com/Yundera/mesh-console)
+  # MESH CONSOLE - the stack's web UI (github.com/NSL-SH/mesh-console)
   # IP and domain, how the gateways route to this box (direct / tunnel /
   # offline), whether the template is up to date with an "Update now" that runs
   # the self-check, and which app the root domain serves. It is what the Mesh

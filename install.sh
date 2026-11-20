@@ -10,7 +10,7 @@ trap 'echo "[FAIL] install.sh line $LINENO exited $?" >&2' ERR
 # stack up, and verifies routing — shown live as a per-step checklist (--display).
 #
 # Usage (first install):
-#   curl -fsSL https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.sh \
+#   curl -fsSL https://cdn.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.sh \
 #     | sudo -E bash -s -- --provider "https://nsl.sh/router/api,userid,signature" \
 #       --domain alice.nsl.sh [--email you@example.com]
 #
@@ -439,7 +439,7 @@ fi
 # A channel name expands against MESH_REPO_URL (environment > .env > the default
 # repo), the same key scripts/library/common.sh reads.
 MESH_REPO_URL="${MESH_REPO_URL:-$(env_get MESH_REPO_URL)}"
-MESH_REPO_URL="${MESH_REPO_URL:-https://github.com/yundera/mesh-router-template-root}"
+MESH_REPO_URL="${MESH_REPO_URL:-https://github.com/nsl-sh/mesh-router-template-root}"
 MESH_REPO_URL="${MESH_REPO_URL%/}"
 MESH_REPO_URL="${MESH_REPO_URL%.git}"
 if [[ ! "$MESH_REPO_URL" =~ ^https://[A-Za-z0-9._/-]+$ ]]; then

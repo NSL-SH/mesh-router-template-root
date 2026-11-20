@@ -504,7 +504,7 @@ MESH_DEFAULT_CHANNEL="stable"
 # environment) replaces it — for the move of this repo between GitHub orgs, or a
 # fork that wants its channel names to mean its own branches. Mirrored in
 # install.sh, install.ps1 and Mesh Console (internal/update).
-MESH_REPO_URL_DEFAULT="https://github.com/yundera/mesh-router-template-root"
+MESH_REPO_URL_DEFAULT="https://github.com/nsl-sh/mesh-router-template-root"
 mesh_repo_url() {
     local u="${MESH_REPO_URL:-$MESH_REPO_URL_DEFAULT}"
     u="${u%/}"

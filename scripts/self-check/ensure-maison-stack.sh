@@ -1,7 +1,7 @@
 #!/bin/bash
 # ensure-maison-stack.sh - Deploy Maison behind its AppShield gate.
 #
-# Maison (github.com/Yundera/Maison) is the dashboard that replaces CasaOS: the same
+# Maison (github.com/NSL-SH/Maison) is the dashboard that replaces CasaOS: the same
 # app grid and the same CasaOS App Store format, in a single Go binary driving the
 # Docker socket. It has no file manager, no database, and no authentication of any
 # kind — the gate in front of it is the only way in.

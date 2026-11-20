@@ -122,13 +122,13 @@ The dashboard's install command curls `install.sh` from jsDelivr — `@stable` b
 (the dashboard's `TEMPLATE_REPO_URL` config selects the ref it serves):
 
 ```
-https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.sh
+https://cdn.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.sh
 ```
 
 `install.sh` no longer fetches individual files from the CDN. It downloads the whole repo as a channel tarball from GitHub, lays down `docker-compose.yml` + `scripts/`, then runs the self-check. The nightly self-check (`ensure-template-sync.sh`) re-syncs from the **same** GitHub tarball for the box's channel:
 
 ```
-https://github.com/yundera/mesh-router-template-root/archive/refs/heads/stable.tar.gz   # or main
+https://github.com/nsl-sh/mesh-router-template-root/archive/refs/heads/stable.tar.gz   # or main
 ```
 
 GitHub serves that archive near-realtime (no 12-hour CDN cache), so pushes to a channel branch reach existing installs on it — compose **and** scripts — within minutes, no purge required.
@@ -137,10 +137,10 @@ Only `install.sh` / `install.ps1` themselves sit behind jsDelivr's floating cach
 
 ```bash
 # stable (the default user path) — purge after merging into stable
-curl "https://purge.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.sh"
-curl "https://purge.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.ps1"
+curl "https://purge.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.sh"
+curl "https://purge.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.ps1"
 # main (dev channel)
-curl "https://purge.jsdelivr.net/gh/yundera/mesh-router-template-root@main/install.sh"
+curl "https://purge.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@main/install.sh"
 ```
 
 Notes:
@@ -167,12 +167,12 @@ all. On those boxes re-running the installer is the only thing that ever lands a
 # Linux — as root; the installer does not call sudo itself
 bash /DATA/AppData/mesh/template/install.sh
 # or, to also pick up a newer installer itself:
-curl -fsSL https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.sh | bash
+curl -fsSL https://cdn.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.sh | bash
 ```
 
 ```powershell
 # Windows / PowerShell
-irm https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.ps1 | iex
+irm https://cdn.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.ps1 | iex
 ```
 
 Everything the installer needs is already in `.env`, so nothing has to be re-typed: the
@@ -185,7 +185,7 @@ Found an existing installation at /DATA/AppData/mesh
   Domain:       alice.nsl.sh
   Provider:     https://nsl.sh/router/api,alice-uid,4kQ7…(hidden)
   Data root:    /DATA
-  Update from:  https://github.com/yundera/mesh-router-template-root/archive/refs/heads/stable.tar.gz
+  Update from:  https://github.com/nsl-sh/mesh-router-template-root/archive/refs/heads/stable.tar.gz
   Auto-update:  disabled
   Claimed:      yes (alice)
 
@@ -295,7 +295,7 @@ Markers live in `${DATA_ROOT}/AppData/mesh/migration-markers/`. See
 | `MESH_CONSOLE_ASSERTION_SECRET` | _(generated)_ | Shared by the mesh-console gate (signs the identity assertion) and app (verifies it). Deleting it re-mints it on the next self-check |
 | `MESH_AUTO_UPDATE` | `true` (`false` for `--local` installs) | Set `false` to opt out of template sync — the stack stays pinned, the rest of the self-check still runs. Update such a box by re-running `install.sh` with no arguments (see [Manual update](#manual-update-installsh-with-no-arguments)) |
 | `UPDATE_URL` | stable branch tarball | **Full** URL the nightly sync pulls from. Set at install via `--channel` / `--update-url`. Must be `.tar.gz` |
-| `MESH_REPO_URL` | `https://github.com/yundera/mesh-router-template-root` | GitHub repo a **channel name** expands to (`--channel`, Mesh Console's channel picker, `set-update-channel.sh`); also read from the environment by `install.sh` / `install.ps1`. Lets the channels follow this repo to another org or a fork. Does not rewrite an `UPDATE_URL` already set |
+| `MESH_REPO_URL` | `https://github.com/nsl-sh/mesh-router-template-root` | GitHub repo a **channel name** expands to (`--channel`, Mesh Console's channel picker, `set-update-channel.sh`); also read from the environment by `install.sh` / `install.ps1`. Lets the channels follow this repo to another org or a fork. Does not rewrite an `UPDATE_URL` already set |
 | `SELF_CHECK_CRON` | `0 3 * * *` | Nightly schedule; `disabled` removes the cron entry |
 | `MESH_UPDATES_MANAGED_BY` | _(unset)_ | Name of an operator that drives this box's updates (e.g. `Yundera`). When set, the box cannot change its own source: `tools/set-update-channel.sh` exits `77`, a no-argument `install.sh` refuses, and Mesh Console's Update page is read-only ("managed by …"). The operator pins `UPDATE_URL` (typically a commit tarball, `…/archive/<sha>.tar.gz`) and runs the self-check itself, usually with `SELF_CHECK_CRON=disabled`. Running the self-check by hand stays available — it only syncs to the pinned source and repairs |
 | `EMAIL_SYNC` | `true` | Set `false` when `EMAIL` is provisioned by an operator rather than looked up from the mesh backend: `ensure-email-synced.sh` then leaves it alone |
@@ -313,7 +313,7 @@ Markers live in `${DATA_ROOT}/AppData/mesh/migration-markers/`. See
 | `SETUP_URL` | _(unset)_ | Where an owner finishes setting the box up. While no sign-in method exists yet (unclaimed, no drop-in connector) every app's sign-in page links there. Inert when empty |
 | `FEEDBACK_URL`, `FEEDBACK_TOKEN` | _(unset)_ | For a box run by an operator: the endpoint Maison's "Send feedback" posts to, and the bearer token it sends. Both or neither. Inert when empty — the menu entry does not exist. `ensure-maison-stack.sh` hands them to Maison as its managed `feedback` setting (token in Maison's secret store) and releases it when they are empty. Contract: Maison's `docs/feedback.md` |
 | `MAISON_SETTINGS_OWNER` | `mesh` | The name Maison shows on the settings this template manages for it ("Managed by …"): mail, feedback, routing. An operator layer sets its own (template-root: `Yundera`) |
-| `IP_ZONE` | _(from the provider)_ | The zone a [mesh-router-nameserver](https://github.com/Yundera/mesh-router-nameserver) serves this box's IP names in (`ip.nsl.sh`: `<ip-dashed>.ip.nsl.sh` → that IP). The agent registers its direct routes there and Maison publishes every app on `<app>-<ip-dashed>.<IP_ZONE>` (`APP_IP_ZONE` in `.env.app`); the backend signs `*.<IP_ZONE>` into the box certificate (`CERT_EXTRA_SANS`). **Required**: there is no nip.io fallback. Unset or empty, `ensure-ip-zone.sh` fills it from the `ipZone` the backend publishes (`<backend>/router/api/version`) and fails when there is none — the box then has no direct route, only its tunnel. A non-empty value is left alone |
+| `IP_ZONE` | _(from the provider)_ | The zone a [mesh-router-nameserver](https://github.com/NSL-SH/mesh-router-nameserver) serves this box's IP names in (`ip.nsl.sh`: `<ip-dashed>.ip.nsl.sh` → that IP). The agent registers its direct routes there and Maison publishes every app on `<app>-<ip-dashed>.<IP_ZONE>` (`APP_IP_ZONE` in `.env.app`); the backend signs `*.<IP_ZONE>` into the box certificate (`CERT_EXTRA_SANS`). **Required**: there is no nip.io fallback. Unset or empty, `ensure-ip-zone.sh` fills it from the `ipZone` the backend publishes (`<backend>/router/api/version`) and fails when there is none — the box then has no direct route, only its tunnel. A non-empty value is left alone |
 | `SSLIP_ROUTES` | `on` | `off` drops sslip.io from the box's routing domains: no `<app>-<ip-dashed>.sslip.io` route for Maison's apps or the platform stacks, and no sslip.io login-callback suffix. For a box rebuilt every day (a demo), which never keeps a Let's Encrypt certificate for those names. Since the CF worker's retirement (2026-11-16) no gateway falls back to sslip.io; the box still needs a working `IP_ZONE` for its agent route. The root `<ip-dashed>.sslip.io` site in the Caddyfile stays |
 | `MESH_ZONE_CERTS` | `box` | `gateway`: mesh-router-caddy never orders the zone's Let's Encrypt certificates (`${DOMAIN}` + `*.${DOMAIN}`), even once the zone is delegated: the root stays on the gateway CA, the wildcard on Caddy's internal CA, no CAA is reported, and the nameservers keep answering the gateway, which terminates every name with its per-user fallback certificate. For a box rebuilt every day (a demo), which would otherwise order both on every rebuild. |
 | `REDIRECT_HOST_SUFFIXES` | _(derived)_ | The domains an app's login callback may land on, as `<app>-<suffix>`: the box's domain, the `IP_ZONE` names, sslip.io. **Rewritten every self-check** from the same list Maison's routing setting is built from (`routing_domains` in `scripts/library/common.sh`), so a hand edit does not stick |

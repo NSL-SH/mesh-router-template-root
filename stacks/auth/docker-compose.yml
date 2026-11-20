@@ -29,7 +29,7 @@
 # either stack comes up (ensure_pcs_network). Nothing in the mesh is on the path
 # between Dex and Authelia: see authelia-internal.
 #
-# AUTH-CONSOLE (Yundera/auth-console) is this stack's web UI and the tile's target:
+# AUTH-CONSOLE (NSL-SH/auth-console) is this stack's web UI and the tile's target:
 # the local accounts (Authelia users) and who can reach the host over SSH. An
 # AppShield gate named `auth-console` plus its backend `auth-console-app`, public
 # at auth-console-${DOMAIN}. NOT `auth-${DOMAIN}`: Dex owns that host, and the
@@ -264,7 +264,7 @@ services:
     # registrar dials Dex lazily and answers 503 login_unavailable while it is gone.
 
   # =============================================================================
-  # AUTH-CONSOLE — this stack's web UI (Yundera/auth-console): Account (the local
+  # AUTH-CONSOLE — this stack's web UI (NSL-SH/auth-console): Account (the local
   # Authelia users) and Access (host accounts, SSH keys, login history).
   #
   # SECURITY: auth-console-app holds the Docker socket (it runs its host actions

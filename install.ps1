@@ -4,7 +4,7 @@
 #   .\install.ps1 -Provider "https://nsl.sh/router/api,userid,sig" -Domain "alice.nsl.sh"
 #
 # Usage (update an existing box):
-#   irm https://cdn.jsdelivr.net/gh/yundera/mesh-router-template-root@stable/install.ps1 | iex
+#   irm https://cdn.jsdelivr.net/gh/nsl-sh/mesh-router-template-root@stable/install.ps1 | iex
 #   .\install.ps1
 #
 # Re-running with NO parameters is the manual update path — the mirror of
@@ -106,7 +106,7 @@ if (-not $Provider -or -not $Domain) {
 # base is derived from its owner/name.
 $RepoUrl = $env:MESH_REPO_URL
 if (-not $RepoUrl) { $RepoUrl = Get-Existing 'MESH_REPO_URL' }
-if (-not $RepoUrl) { $RepoUrl = "https://github.com/yundera/mesh-router-template-root" }
+if (-not $RepoUrl) { $RepoUrl = "https://github.com/nsl-sh/mesh-router-template-root" }
 $RepoUrl = $RepoUrl.TrimEnd('/') -replace '\.git$', ''
 $RepoPath = $RepoUrl -replace '^https://github\.com/', ''
 $UpdateUrl = ""
