@@ -60,7 +60,7 @@ services:
   # unrouted host and login dead-ends. The gate therefore takes the app's public
   # name; the backend gets the suffix.
   maison:
-    image: ghcr.io/nsl-sh/appshield:4.1.0
+    image: ghcr.io/nsl-sh/appshield:4.2.0
     container_name: maison
     hostname: maison
     restart: unless-stopped
@@ -123,7 +123,7 @@ services:
   # The dashboard itself. Named `maison-app` so the gate above can own the public
   # name `maison` — see the naming note there.
   maison-app:
-    image: ghcr.io/nsl-sh/maison:1.1.103
+    image: ghcr.io/nsl-sh/maison:1.1.104
     container_name: maison-app
     hostname: maison-app
     restart: unless-stopped
