@@ -310,8 +310,7 @@ routing_domains() {
     form="$(primary_form)"
     {
         # The first domain is Maison's primary: tiles open there and apps get it as
-        # APP_URL. The dash form, unless the box serves the dot form and its owner
-        # chose it (primary_form).
+        # APP_URL. The dot form, unless its owner chose dash (primary_form).
         [ "$form" = dot ] && printf '%s\n' "$dot"
         printf '%s\n' 'gateway|${DOMAIN}|import=gateway_tls'
         # Dot form <app>.${DOMAIN}, always: no labels, the Caddyfile's *.${DOMAIN} site
@@ -330,27 +329,13 @@ routing_domains() {
     }
 }
 
-# True when the box can serve the dot form <app>.${DOMAIN}: its zone is delegated to
-# the mesh nameservers (mesh-router-caddy's zone state, from the backend's dns.live)
-# and Caddy holds the zone's Let's Encrypt wildcard. Before that the dot names resolve
-# to Cloudflare, whose certificate stops at one level below the zone.
-dot_form_ready() {
-    local domain crt
-    domain="$(get_env_value DOMAIN)"
-    [ -n "$domain" ] || return 1
-    [ "$(cat "$MESH_ROOT/data/caddy/data/mesh-zone.state" 2>/dev/null)" = 1 ] || return 1
-    for crt in "$MESH_ROOT"/data/caddy/data/caddy/certificates/acme*/"wildcard_.$domain"/"wildcard_.$domain.crt"; do
-        [ -s "$crt" ] && return 0
-    done
-    return 1
-}
-
-# The form of the box's primary names, dash (<app>-${DOMAIN}) or dot (<app>.${DOMAIN}):
-# MESH_PRIMARY_FORM, the owner's choice (tools/set-primary-form.sh, mesh-console),
-# honoured only while dot_form_ready; dash otherwise. Store apps only: the platform
-# stacks keep their dash names, Dex and Authelia always.
+# The form of the box's primary names, dot (<app>.${DOMAIN}) or dash (<app>-${DOMAIN}):
+# dot, unless the owner chose dash (MESH_PRIMARY_FORM=dash, from tools/set-primary-form.sh
+# or mesh-console). Dash is the deprecated form, kept as an opt-out until it is phased
+# out; nothing falls back to it. Store apps only: the platform stacks keep their dash
+# names, Dex and Authelia always.
 primary_form() {
-    if [ "$(get_env_value MESH_PRIMARY_FORM)" = dot ] && dot_form_ready; then
+    if [ "$(get_env_value MESH_PRIMARY_FORM)" != dash ]; then
         echo dot
     else
         echo dash
