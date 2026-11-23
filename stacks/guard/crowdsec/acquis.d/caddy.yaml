@@ -1,0 +1,6 @@
+# mesh-router-caddy's access log file (MESH_ACCESS_LOG=on): JSON, client_ip = the real
+# client on the direct and the gateway path alike.
+filenames:
+  - /var/log/caddy/access.log
+labels:
+  type: caddy

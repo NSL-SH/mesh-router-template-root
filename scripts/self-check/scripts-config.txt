@@ -53,6 +53,12 @@ ensure-auth-stack.sh
 # Auxiliary stack — Maison, the dashboard. MUST stay after ensure-auth-stack.sh:
 # its AppShield gate needs auth-registrar / dex reachable by name on `pcs`.
 ensure-maison-stack.sh
+
+# The guard stack (crowdsec + mesh-router-guard): IP bans on the direct path, while
+# MESH_GUARD=on; brought down otherwise. After ensure-stack-up.sh: it mounts the access
+# log mesh-router-caddy writes. Nothing depends on it, so it runs after the login and
+# dashboard stacks: a guard failure never delays them.
+ensure-guard-stack.sh
 # Retired, and listed here only so nobody reintroduces it: ensure-maison-app-mirror.sh.
 # It projected an app's compose + a generated .env from /DATA/AppData/casaos/apps/<app>
 # into ${DATA_ROOT}/AppData/<app>. CasaOS stopped writing that tree when it was removed

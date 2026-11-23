@@ -128,6 +128,12 @@ case "$(get_env_value MESH_USAGE_REPORT)" in
     *) echo "WARN: unknown MESH_USAGE_REPORT='$(get_env_value MESH_USAGE_REPORT)', treated as on" ;;
 esac
 
+# The guard stack (ensure-guard-stack.sh): only "on" deploys it.
+case "$(get_env_value MESH_GUARD)" in
+    ''|on|off) ;;
+    *) echo "WARN: unknown MESH_GUARD='$(get_env_value MESH_GUARD)', treated as off" ;;
+esac
+
 # Zone certificates (mesh-router-caddy, BOX ZONE): only "gateway" acts.
 case "$(get_env_value MESH_ZONE_CERTS)" in
     ''|box|gateway) ;;

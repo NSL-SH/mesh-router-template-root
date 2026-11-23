@@ -1,0 +1,115 @@
+# =============================================================================
+# GUARD STACK — IP bans on the direct path (MESH_GUARD=on)
+# =============================================================================
+# Deployed to ${DATA_ROOT}/AppData/guard by scripts/self-check/ensure-guard-stack.sh.
+# Two containers, split on purpose: the one that reads attacker-controlled input has
+# no privileges, and the one with NET_ADMIN in the host netns parses nothing.
+#
+#   crowdsec           detection + local decisions (agent and local API). Reads sshd's
+#                      journal and mesh-router-caddy's access log file, read-only. No
+#                      CrowdSec Central API: nothing is shared with CrowdSec, and its
+#                      community blocklist is not used.
+#   mesh-router-guard  enforcement: the CrowdSec firewall bouncer, owning the one nft
+#                      table `inet nsl-guard` (exempt sources first, then the bans,
+#                      hooked before Docker's DNAT). Gateways, tunnel and backend are
+#                      exempt, read from the backend; see its README.
+#
+# Design: yundera-root doc/study/pcs-edge-protection-study.md §4.2-4.3.
+# =============================================================================
+name: guard
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  crowdsec:
+    # -debian: the variant with journalctl. Debian 13 boxes log sshd to the journal
+    # only (no auth.log), as `sshd-session`; Ubuntu does both.
+    image: crowdsecurity/crowdsec:v1.8.2-debian
+    container_name: crowdsec
+    hostname: crowdsec
+    cpu_shares: 50
+    # 67 MiB idle, ~170 MiB after a burst (measured on holyhorse, 2026-11-20).
+    mem_limit: 256m
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      COLLECTIONS: "crowdsecurity/sshd crowdsecurity/caddy crowdsecurity/base-http-scenarios crowdsecurity/http-cve"
+      DISABLE_ONLINE_API: "true"
+      CUSTOM_HOSTNAME: crowdsec
+      # Registers mesh-router-guard's key with the local API at start.
+      BOUNCER_KEY_guard: ${GUARD_BOUNCER_KEY}
+      # Changes with the files in crowdsec/nsl (ensure-guard-stack.sh), so an edit
+      # there recreates the container: CrowdSec reads its config at start only.
+      GUARD_CONFIG_HASH: ${GUARD_CONFIG_HASH:-}
+    # The local API, for mesh-router-guard in the host netns. Loopback only.
+    ports:
+      - "127.0.0.1:${MESH_GUARD_LAPI_PORT:-8089}:8080"
+    volumes:
+      # Ours, read-only: acquisition, ban profiles (escalation), and the overlay that
+      # points CrowdSec at them. The overlay is a single-file mount: ensure-guard-stack.sh
+      # rewrites it in place.
+      - ${DATA_ROOT:-/DATA}/AppData/guard/crowdsec/nsl:/etc/crowdsec-nsl:ro
+      - ${DATA_ROOT:-/DATA}/AppData/guard/crowdsec/nsl/config.yaml.local:/etc/crowdsec/config.yaml.local:ro
+      # CrowdSec's own state: hub, credentials, the decision database.
+      - ${DATA_ROOT:-/DATA}/AppData/guard/crowdsec/etc:/etc/crowdsec
+      - ${DATA_ROOT:-/DATA}/AppData/guard/crowdsec/data:/var/lib/crowdsec/data
+      # Inputs. The host journal through journalctl --root=/host (persistent or
+      # volatile, whichever the host keeps) and Caddy's access log (MESH_ACCESS_LOG).
+      - /var/log/journal:/host/var/log/journal:ro
+      - /run/log/journal:/host/run/log/journal:ro
+      - /etc/machine-id:/host/etc/machine-id:ro
+      - ${DATA_ROOT:-/DATA}/AppData/mesh/data/caddy/log:/var/log/caddy:ro
+    security_opt:
+      - no-new-privileges:true
+
+  mesh-router-guard:
+    image: ghcr.io/nsl-sh/mesh-router-guard:0.1.0
+    container_name: mesh-router-guard
+    cpu_shares: 30
+    mem_limit: 64m
+    restart: unless-stopped
+    logging: *logging
+    # The host netns and NET_ADMIN, nothing else: it only manages `inet nsl-guard`,
+    # and stopping it removes the table.
+    network_mode: host
+    cap_drop: [ALL]
+    cap_add: [NET_ADMIN]
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
+    environment:
+      # The backend URL alone (first field of PROVIDER_STR): the guard reads its gateway
+      # list. The box credential stays out of this stack.
+      PROVIDER_STR: ${GUARD_BACKEND_URL:-}
+      PUBLIC_IP: ${PUBLIC_IPV4:-}
+      PUBLIC_IPV6: ${PUBLIC_IPV6:-}
+      GUARD_EXEMPT: ${MESH_GUARD_EXEMPT:-}
+      LAPI_URL: http://127.0.0.1:${MESH_GUARD_LAPI_PORT:-8089}/
+      BOUNCER_KEY: ${GUARD_BOUNCER_KEY}
+    volumes:
+      # The backend's last gateway list: enforcement survives a backend outage at boot.
+      - ${DATA_ROOT:-/DATA}/AppData/guard/state:/var/lib/mesh-router-guard
+    depends_on:
+      - crowdsec
+
+# A System tile in Maison. Not stoppable from there: stopping it lifts every ban.
+x-compose-app:
+  schema_version: 2
+  id: guard
+  title:
+    en_us: Guard
+  category: pcs
+  developer: NSL
+  view: system
+  lifecycle:
+    stoppable: false
+    uninstallable: false
+    # Updated by the template that deploys it, not from a store.
+    updatable: false
+  # Only CrowdSec's decision database: rebuilt by itself, not worth a backup's stop.
+  backup:
+    skip: true

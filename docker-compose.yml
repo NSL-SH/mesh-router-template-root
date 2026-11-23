@@ -150,8 +150,9 @@ services:
       # (entrypoint, USAGE); off: no access log at all. Same key as the agent's.
       - MESH_USAGE_REPORT=${MESH_USAGE_REPORT:-on}
       # on: the access log also goes to data/caddy/log/access.log, for an intrusion
-      # detector (CrowdSec) to read (entrypoint, ACCESS LOG); off: no file.
-      - MESH_ACCESS_LOG=${MESH_ACCESS_LOG:-off}
+      # detector (CrowdSec) to read (entrypoint, ACCESS LOG); off: no file. Unset, it
+      # follows MESH_GUARD: the guard stack's CrowdSec reads that file.
+      - MESH_ACCESS_LOG=${MESH_ACCESS_LOG:-${MESH_GUARD:-off}}
       # gateway: never order the zone's certificates, even delegated (entrypoint, BOX
       # ZONE); the gateway's fallback certificate serves every name. For demos.
       - MESH_ZONE_CERTS=${MESH_ZONE_CERTS:-box}
@@ -292,7 +293,7 @@ services:
       #
       # PLATFORM_PROJECTS in the mesh .env replaces the list, for a deployment that
       # runs platform stacks of its own beside these.
-      PLATFORM_PROJECTS: "${PLATFORM_PROJECTS:-mesh,auth,maison}"
+      PLATFORM_PROJECTS: "${PLATFORM_PROJECTS:-mesh,auth,maison,guard}"
     expose:
       - "8080"   # NEVER `ports:` — see the security note above
     networks:

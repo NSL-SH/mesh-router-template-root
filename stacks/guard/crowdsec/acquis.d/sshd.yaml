@@ -1,0 +1,8 @@
+# sshd from the host journal: the same on Ubuntu (which also writes auth.log) and
+# Debian 13 (journal only, process `sshd-session`, unit still ssh.service).
+source: journalctl
+journalctl_filter:
+  - "--root=/host"
+  - "_SYSTEMD_UNIT=ssh.service"
+labels:
+  type: syslog

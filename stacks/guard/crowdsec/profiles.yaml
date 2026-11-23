@@ -1,0 +1,21 @@
+# Ban lifetime: 4 h for a first offence, doubling on each repeat, capped at 7 days
+# (fail2ban's recidive). GetDecisionsCount counts this address's past decisions still
+# in the database, expired and deleted ones included (CrowdSec keeps them 7 days). It
+# counts decisions, not incidents: one scan that trips 2-3 scenarios at once already
+# climbs to 8-16 h, which suits a scanner.
+name: nsl_ip_ban
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+duration_expr: "Sprintf('%dh', GetDecisionsCount(Alert.GetValue()) >= 6 ? 168 : [4, 8, 16, 32, 64, 128][GetDecisionsCount(Alert.GetValue())])"
+on_success: break
+---
+name: nsl_range_ban
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+  - type: ban
+    duration: 4h
+on_success: break
