@@ -24,7 +24,7 @@
         # was most of a container log growing ~50 MB/day. The watcher prints its
         # own line whenever it changes anything.
         exclude admin.api
-        # The access log goes only to the `usage` logger below, never to stdout.
+        # The access log goes only to the `usage` and `access` loggers below, never to stdout.
         exclude http.log.access
     }
 
@@ -54,6 +54,11 @@
     # the access log to mesh-router-agent, written by mesh-router-caddy's entrypoint
     # (USAGE). A glob, so "off" (no file) or an older image only logs a warning.
     import /data/mesh-usage*.caddy
+
+    # The access log on disk (MESH_ACCESS_LOG, off by default): an `access` logger writing
+    # JSON to data/caddy/log/access.log, size-capped, for CrowdSec. Written by
+    # mesh-router-caddy's entrypoint (ACCESS LOG). A glob, so "off" only logs a warning.
+    import /data/mesh-access*.caddy
 }
 
 # The box zone's TLS: two snippets written by mesh-router-caddy itself (entrypoint,

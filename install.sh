@@ -537,6 +537,7 @@ mkdir -p "$APP_DIR" "$DATA_ROOT" \
   "$MESH_ROOT/data/ca" \
   "$MESH_ROOT/data/caddy/data" \
   "$MESH_ROOT/data/caddy/config" \
+  "$MESH_ROOT/data/caddy/log" \
   "$MESH_ROOT/log" \
   "$SCRIPTS_DIR" "$TEMPLATE_DIR"
 echo "[OK] Layout under $MESH_ROOT"
