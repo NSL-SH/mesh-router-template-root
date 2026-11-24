@@ -77,8 +77,16 @@ access_control:
 
 # Brute-force protection. Dex has NONE (dexidp/dex#1671, open since 2020), and
 # the interactive password check happens here, so this block is the PCS's only
-# account-level rate limit.
+# password rate limit. Both subjects: `user` bans an account tried too often from
+# anywhere, `ip` bans a source trying many accounts (a spray never repeats one).
+# The IP is the real client on the direct and the gateway path alike: Caddy sets
+# X-Forwarded-For from client_ip and overwrites the one a client sends. Second
+# factor, password reset and session elevation have Authelia's per-IP
+# server.endpoints.rate_limits, on by default.
 regulation:
+  modes:
+    - 'user'
+    - 'ip'
   max_retries: 5
   find_time: '2m'
   ban_time: '10m'
