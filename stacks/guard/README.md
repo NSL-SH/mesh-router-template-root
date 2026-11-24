@@ -25,11 +25,22 @@ ranges and `MESH_GUARD_EXEMPT`. Design: the PCS edge-protection study
 A ban lasts 4 h, doubling on each repeat within CrowdSec's 7-day memory, capped at 7 days
 (`crowdsec/profiles.yaml`).
 
+## Who is never banned
+
+Besides the exempt sources above, the CrowdSec allowlist `nsl-sso`: every source that completed
+an SSO login on this box, for `MESH_GUARD_SSO_ALLOW_DAYS` (90) after its last login, an IPv6 one
+as its /64. `crowdsec/sso-allowlist.sh`, run beside CrowdSec, reads it from the access log: a
+`GET /callback` answered 303 on `auth-${DOMAIN}`, which Dex returns only for a finalized login
+(Authelia or Yundera Login alike). Adding a source deletes its bans, so an owner banned on the
+direct path gets back in by signing in through the gateway name. Per box, never reported.
+
+Login attempts themselves are limited by Authelia (`regulation`, by user and by IP), not here.
+
 ## Files
 
 | Path | Owner |
 |---|---|
-| `crowdsec/nsl/` | The template (`stacks/guard/crowdsec/`): acquisition, ban profiles, the `config.yaml.local` overlay. Rewritten every self-check; a change recreates `crowdsec` |
+| `crowdsec/nsl/` | The template (`stacks/guard/crowdsec/`): acquisition, ban profiles, the `config.yaml.local` overlay, the entrypoint and the SSO allowlist reader. Rewritten every self-check; a change recreates `crowdsec` |
 | `crowdsec/etc/`, `crowdsec/data/` | CrowdSec: hub, credentials, decision database. Deleting them starts it from scratch |
 | `state/` | mesh-router-guard: the backend's last gateway list, so enforcement survives a backend outage at boot |
 | `.stack.env` | `GUARD_BOUNCER_KEY`, minted once |
@@ -42,4 +53,5 @@ docker exec crowdsec cscli decisions list              # current bans and why
 docker exec crowdsec cscli decisions delete --ip <ip>  # unban (applied within 10 s)
 docker exec crowdsec cscli alerts list                 # what was detected
 docker exec crowdsec cscli metrics                     # lines read and parsed, per input
+docker exec crowdsec cscli allowlists inspect nsl-sso  # sources allowlisted by an SSO login
 ```

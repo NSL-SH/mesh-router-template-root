@@ -36,6 +36,8 @@ services:
     mem_limit: 256m
     restart: unless-stopped
     logging: *logging
+    # CrowdSec's own entrypoint plus the SSO allowlist reader (crowdsec/sso-allowlist.sh).
+    entrypoint: ["/bin/bash", "/etc/crowdsec-nsl/start.sh"]
     environment:
       COLLECTIONS: "crowdsecurity/sshd crowdsecurity/caddy crowdsecurity/base-http-scenarios crowdsecurity/http-cve"
       DISABLE_ONLINE_API: "true"
@@ -45,6 +47,10 @@ services:
       # Changes with the files in crowdsec/nsl (ensure-guard-stack.sh), so an edit
       # there recreates the container: CrowdSec reads its config at start only.
       GUARD_CONFIG_HASH: ${GUARD_CONFIG_HASH:-}
+      # Dex's issuer host: a 303 on its /callback is a completed SSO login, and its
+      # source is allowlisted on this box for SSO_ALLOW_DAYS.
+      SSO_HOST: auth-${DOMAIN}
+      SSO_ALLOW_DAYS: ${MESH_GUARD_SSO_ALLOW_DAYS:-90}
     # The local API, for mesh-router-guard in the host netns. Loopback only.
     ports:
       - "127.0.0.1:${MESH_GUARD_LAPI_PORT:-8089}:8080"
