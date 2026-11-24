@@ -270,7 +270,7 @@ services:
       pcs: null
 
   mesh-console-app:
-    image: ghcr.io/nsl-sh/mesh-console:1.20.1
+    image: ghcr.io/nsl-sh/mesh-console:1.21.0
     container_name: mesh-console-app
     hostname: mesh-console-app
     restart: unless-stopped
