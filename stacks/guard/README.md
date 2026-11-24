@@ -36,6 +36,15 @@ direct path gets back in by signing in through the gateway name. Per box, never 
 
 Login attempts themselves are limited by Authelia (`regulation`, by user and by IP), not here.
 
+## Known gaps
+
+- **Port 80 is not watched.** Only srv0 (`:443`) writes the access log; the HTTP→HTTPS redirect
+  server does not, so a scanner probing plain HTTP is not seen. It only ever gets a redirect.
+- **Failed Authelia logins do not reach CrowdSec.** Authelia bans the source itself
+  (`regulation`, by user and by IP), but for Authelia only: the source is not banned on the
+  box's other ports and will not count toward a fleet ban. A CrowdSec scenario on the access log
+  (`POST /api/firstfactor` answered 401 on `local-auth-*`) would cover both. Not done yet.
+
 ## Files
 
 | Path | Owner |
