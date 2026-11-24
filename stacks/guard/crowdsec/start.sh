@@ -7,4 +7,14 @@
         sleep 30
     done
 ) &
+# guard-sync's machine (watcher) credential, from SYNC_PASSWORD, once the local API is
+# up. Re-applied at every start, so a re-minted password takes effect with the recreate.
+if [ -n "${SYNC_PASSWORD:-}" ]; then
+    (
+        until cscli lapi status >/dev/null 2>&1; do sleep 5; done
+        cscli machines add guard-sync --password "$SYNC_PASSWORD" --force -f /dev/null >/dev/null 2>&1 &&
+            echo "[start] guard-sync machine registered" >&2 ||
+            echo "[start] WARN: could not register the guard-sync machine" >&2
+    ) &
+fi
 cd / && exec /bin/bash docker_start.sh "$@"

@@ -12,7 +12,11 @@
 #     minted once into the stack's .stack.env. Deleting it re-mints it; CrowdSec
 #     registers the new one at its next start.
 #   - GUARD_BACKEND_URL: the backend part of PROVIDER_STR, where mesh-router-guard reads
-#     the gateway list it must never drop. The box credential itself stays out.
+#     the gateway list it must never drop.
+#   - GUARD_PROVIDER_STR: the whole box credential, for guard-sync alone (fleet reports
+#     and list); the two containers that parse traffic or touch the firewall never get it.
+#   - GUARD_SYNC_PASSWORD: guard-sync's machine password on CrowdSec's local API, minted
+#     once like the bouncer key; crowdsec's start.sh registers it.
 #
 # MESH_GUARD=off (the default) brings the stack down if it is running: stopping
 # mesh-router-guard removes its nft table, so no ban outlives it. The folder and
@@ -61,10 +65,12 @@ done
 CONFIG_HASH="$(cd "$DEST_CONFIG" && find . -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16)"
 
 # --- secrets / inputs --------------------------------------------------------
-if [ -z "$(get_stack_env_value GUARD_BOUNCER_KEY "$GUARD_STACK_ENV")" ]; then
-    stack_env_set GUARD_BOUNCER_KEY "$(openssl rand -hex 32)" "$GUARD_STACK_ENV"
-    echo "Generated GUARD_BOUNCER_KEY"
-fi
+for key in GUARD_BOUNCER_KEY GUARD_SYNC_PASSWORD; do
+    if [ -z "$(get_stack_env_value "$key" "$GUARD_STACK_ENV")" ]; then
+        stack_env_set "$key" "$(openssl rand -hex 32)" "$GUARD_STACK_ENV"
+        echo "Generated $key"
+    fi
+done
 
 PROVIDER_VALUE="$(get_env_value PROVIDER_STR)"
 [ -n "$PROVIDER_VALUE" ] || PROVIDER_VALUE="$(get_env_value PROVIDER)"
@@ -74,10 +80,11 @@ if [ -z "$BACKEND_URL" ]; then
     # the safe side (see mesh-router-guard's README).
     log_warn "No PROVIDER_STR: mesh-router-guard cannot read the gateway list and will not enforce bans"
 fi
+mkdir -p "$GUARD_DIR/state/sync"
 
 # --- deploy ------------------------------------------------------------------
 "$SCRIPTS_DIR/tools/deploy-stack.sh" guard "$GUARD_DIR" \
-    "GUARD_CONFIG_HASH=$CONFIG_HASH" "GUARD_BACKEND_URL=$BACKEND_URL"
+    "GUARD_CONFIG_HASH=$CONFIG_HASH" "GUARD_BACKEND_URL=$BACKEND_URL" "GUARD_PROVIDER_STR=$PROVIDER_VALUE"
 
 cd "$GUARD_DIR"
 if wait_stack_settled 90 15; then

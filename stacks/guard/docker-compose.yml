@@ -13,6 +13,11 @@
 #                      table `inet nsl-guard` (exempt sources first, then the bans,
 #                      hooked before Docker's DNAT). Gateways, tunnel and backend are
 #                      exempt, read from the backend; see its README.
+#   guard-sync         the fleet link (same image): reports what this box banned to the
+#                      backend and imports the fleet list (fleet bans + public lists)
+#                      into CrowdSec, minus what this box allowlists. The only container
+#                      of the stack holding the box credential; no privileges, and it
+#                      reads no attacker traffic.
 #
 # Design: yundera-root doc/study/pcs-edge-protection-study.md §4.2-4.3.
 # =============================================================================
@@ -32,8 +37,9 @@ services:
     container_name: crowdsec
     hostname: crowdsec
     cpu_shares: 50
-    # 67 MiB idle, ~170 MiB after a burst (measured on holyhorse, 2026-11-20).
-    mem_limit: 256m
+    # 67 MiB idle, ~170 MiB after a burst (measured on holyhorse, 2026-11-20); ~165 MiB
+    # holding the fleet list's ~25 k imported decisions.
+    mem_limit: 384m
     restart: unless-stopped
     logging: *logging
     # CrowdSec's own entrypoint plus the SSO allowlist reader (crowdsec/sso-allowlist.sh).
@@ -51,6 +57,8 @@ services:
       # source is allowlisted on this box for SSO_ALLOW_DAYS.
       SSO_HOST: auth-${DOMAIN}
       SSO_ALLOW_DAYS: ${MESH_GUARD_SSO_ALLOW_DAYS:-90}
+      # guard-sync's machine credential, registered by start.sh.
+      SYNC_PASSWORD: ${GUARD_SYNC_PASSWORD}
     # The local API, for mesh-router-guard in the host netns. Loopback only.
     ports:
       - "127.0.0.1:${MESH_GUARD_LAPI_PORT:-8089}:8080"
@@ -73,7 +81,7 @@ services:
       - no-new-privileges:true
 
   mesh-router-guard:
-    image: ghcr.io/nsl-sh/mesh-router-guard:0.1.0
+    image: ghcr.io/nsl-sh/mesh-router-guard:0.2.0
     container_name: mesh-router-guard
     cpu_shares: 30
     mem_limit: 64m
@@ -99,6 +107,33 @@ services:
     volumes:
       # The backend's last gateway list: enforcement survives a backend outage at boot.
       - ${DATA_ROOT:-/DATA}/AppData/guard/state:/var/lib/mesh-router-guard
+    depends_on:
+      - crowdsec
+
+  guard-sync:
+    image: ghcr.io/nsl-sh/mesh-router-guard:0.2.0
+    container_name: guard-sync
+    entrypoint: ["guard-sync"]
+    cpu_shares: 20
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logging
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      # The box credential (<backend>,<userid>,<signature>): reports and the list are
+      # signed requests, like route registration.
+      PROVIDER_STR: ${GUARD_PROVIDER_STR:-}
+      LAPI_URL: http://crowdsec:8080/
+      SYNC_PASSWORD: ${GUARD_SYNC_PASSWORD}
+      # off: this box sends nothing (it still imports the list).
+      GUARD_REPORT: ${MESH_GUARD_REPORT:-on}
+      # off: no fleet bans or public lists here, local detection only.
+      GUARD_IMPORT: ${MESH_GUARD_IMPORT:-on}
+    volumes:
+      # sync.json: the pinned list key and what the last runs did (tools/guard.sh).
+      - ${DATA_ROOT:-/DATA}/AppData/guard/state/sync:/var/lib/mesh-router-guard
     depends_on:
       - crowdsec
 
