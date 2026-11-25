@@ -152,7 +152,7 @@ execute_script_with_logging() {
         else
             "$script_path" 2>&1
         fi
-    } | while IFS= read -r line; do
+    } </dev/null | while IFS= read -r line; do
         echo "$line"
         log_to_file_only "OUTPUT" "$line"
     done
@@ -196,7 +196,9 @@ execute_script_display() {
 
     local out_file; out_file=$(mktemp)
     local exit_code=0
-    ( cd "$(dirname "$script_path")" && "$script_path" ) >"$out_file" 2>&1 || exit_code=$?
+    # stdin from /dev/null: a self-check is never interactive, and under install.sh's
+    # `curl | bash` the inherited stdin is the rest of the installer itself.
+    ( cd "$(dirname "$script_path")" && "$script_path" ) </dev/null >"$out_file" 2>&1 || exit_code=$?
 
     # Mirror captured output into the rotating log
     while IFS= read -r line; do

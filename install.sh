@@ -34,6 +34,13 @@ trap 'echo "[FAIL] install.sh line $LINENO exited $?" >&2' ERR
 # Windows/WSL (--windows) installs are Linux-self-check-incompatible (cron,
 # logrotate, apt) and stay on a direct one-shot path: compose up, no auto-update.
 
+# The whole script is one brace group, closed on its last line, so bash parses all of
+# it before running any of it. Under `curl ... | bash`, stdin IS the script, and bash
+# otherwise reads it a line at a time as it goes: any child that reads stdin (one
+# does, inside the self-check) swallowed everything after it — the claim and the
+# summary — and bash, at EOF, exited 0. The box was left unclaimed with no word said.
+{
+
 APP_DIR="/DATA/AppData/mesh"   # everything: compose, .env, template/, scripts/, data/
 
 # Defaults
@@ -868,12 +875,79 @@ if [[ "$SELF_CHECK_RC" -eq 0 && -x "$USER_MGR" ]]; then
   fi
 fi
 
+# ---------------------------------------------------------------------------
+# Wait for the box's names to serve a browser-trusted certificate publicly.
+#
+# The self-check proves the box serves, not that a browser accepts it. A new box's
+# dot names (<app>.${DOMAIN}, where Maison's tiles open) have no trusted certificate
+# until the backend sees the zone delegated and a gateway holds the box's fallback
+# certificate, or the box its own: minutes after the first route registration. Handing
+# out the URL before that sends the owner to a certificate error.
+#
+# Asked through a gateway (the backend's gatewayIps) rather than plain DNS: a box only
+# gets a direct answer once the backend has verified its own certificate, and a home
+# box behind NAT may not reach its own public address (no hairpin). Plain DNS when the
+# backend names no gateway.
+#
+# A first install or identity change waits up to MESH_INSTALL_HTTPS_WAIT seconds
+# (default 600; 0 = check once); an update checks once. Skipped for an
+# operator-managed box (its operator provisions on its own schedule) and --local.
+# ---------------------------------------------------------------------------
+HTTPS_READY=""
+https_trusted() {
+  # $1 = host, $2 = gateway IP or empty. Trusted = TLS verified and not a 5xx.
+  local code
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+    ${2:+--resolve "$1:443:$2"} "https://$1/" 2>/dev/null)" || return 1
+  [[ "$code" =~ ^[1-4][0-9][0-9]$ ]]
+}
+if [[ "$SELF_CHECK_RC" -eq 0 && -z "$LOCAL_COMPOSE" \
+      && -z "$(grep -m1 -E '^MESH_UPDATES_MANAGED_BY=.' "$ENV_FILE" 2>/dev/null)" ]]; then
+  _wait=0
+  if [[ -z "$PREV_PROVIDER_STR$PREV_DOMAIN" || "$IDENTITY_CHANGED" == true ]]; then
+    _wait="${MESH_INSTALL_HTTPS_WAIT:-600}"
+    [[ "$_wait" =~ ^[0-9]+$ ]] || _wait=600
+  fi
+  _gw="$(curl -s --max-time 10 "${PROVIDER_STR%%,*}/router/api/version" 2>/dev/null \
+    | grep -o '"gatewayIps":\["[0-9.]*' | grep -o '[0-9.]*$')" || _gw=""
+  _hosts=("$DOMAIN")
+  [[ "$(grep -m1 -E '^PRIMARY_FORM_ACTIVE=' "$ENV_FILE" 2>/dev/null | cut -d= -f2-)" == dash ]] \
+    || _hosts+=("maison.$DOMAIN")
+  _deadline=$(( $(date +%s) + _wait ))
+  _said=false
+  HTTPS_READY=false
+  while :; do
+    _ok=true
+    for _h in "${_hosts[@]}"; do https_trusted "$_h" "$_gw" || { _ok=false; break; }; done
+    if [[ "$_ok" == true ]]; then HTTPS_READY=true; break; fi
+    (( $(date +%s) < _deadline )) || break
+    if [[ "$_said" == false ]]; then
+      echo ""
+      echo "[..] Waiting for https://${_hosts[-1]} to serve a trusted certificate"
+      echo "     (a new domain takes a few minutes; up to $(( (_wait + 59) / 60 )) min)..."
+      _said=true
+    fi
+    sleep 15
+  done
+  if [[ "$_said" == true ]]; then
+    [[ "$HTTPS_READY" == true ]] && echo "[OK] Certificates trusted" || echo "[!!] Not trusted yet"
+  fi
+  unset _wait _gw _hosts _deadline _said _ok _h
+fi
+
 echo ""
 if [[ "$SELF_CHECK_RC" -eq 0 ]]; then
   echo "=== Installation complete ==="
   echo "  Domain:  https://${DOMAIN}"
   echo "  Install: ${APP_DIR}"
   echo ""
+  if [[ "$HTTPS_READY" == false ]]; then
+    echo "[!!] This server's addresses do not serve a trusted certificate yet. A new"
+    echo "     domain usually gets one within minutes; until then your browser may show"
+    echo "     a certificate warning on https://<app>.${DOMAIN}. The same apps answer"
+    echo "     on https://<app>-${DOMAIN} meanwhile (e.g. https://maison-${DOMAIN})."
+    echo ""
+  fi
   if [[ "$CLAIMED_NOW" == true ]]; then
     echo "Open https://${DOMAIN} in your browser and sign in."
     echo ""
@@ -925,3 +999,4 @@ else
 fi
 
 exit "$SELF_CHECK_RC"
+}

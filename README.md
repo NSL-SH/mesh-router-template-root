@@ -157,6 +157,12 @@ images, bring the stack up, and verify routing — shown live during install as 
 checklist. The same self-check then runs nightly via cron. Windows (`--windows`) installs skip
 it entirely — the stack works but stays manual-update.
 
+A first install then waits for `https://${DOMAIN}` and a dot name (`https://maison.${DOMAIN}`) to
+serve a browser-trusted certificate, asked through a gateway, before it prints the URL: a new
+domain's dot names are only covered once the backend sees the zone delegated (minutes). Up to
+`MESH_INSTALL_HTTPS_WAIT` seconds (environment, default 600; `0` checks once); an update checks
+once, and an operator-managed box (`MESH_UPDATES_MANAGED_BY`) or `--local` install skips it.
+
 ### Manual update (`install.sh` with no arguments)
 
 Auto-update is optional (`MESH_AUTO_UPDATE=false`), and on Windows there is no self-check at
