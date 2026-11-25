@@ -17,6 +17,13 @@
 
 set -e
 
+# A user crontab (`crontab -l` of root, where ensure-nightly-self-check.sh puts
+# the nightly entry) runs with cron's bare PATH=/usr/bin:/bin — /etc/crontab's
+# PATH line does not apply to it. Without this, sysctl and logrotate (/usr/sbin)
+# and yq (/usr/local/bin) are "not found" every night: ensure-host-sysctl.sh fails
+# with exit 127 and the other two reinstall their tool on every run.
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin${PATH:+:$PATH}"
+
 LOCK_FILE="/var/run/mesh-self-check.lock"
 
 exec 200>"$LOCK_FILE"
