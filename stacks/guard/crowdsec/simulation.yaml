@@ -1,0 +1,9 @@
+# Scenarios that alert but never ban (config.yaml.local points CrowdSec here).
+#
+# crowdsecurity/http-crawl-non_statics: replaced by nsl/http-crawl-non_statics
+# (scenarios/), which counts refused requests only. Kept in simulation, not removed,
+# so `cscli alerts list` still shows what it would have banned; guard-sync never
+# reports a simulated alert.
+simulation: false
+exclusions:
+  - crowdsecurity/http-crawl-non_statics

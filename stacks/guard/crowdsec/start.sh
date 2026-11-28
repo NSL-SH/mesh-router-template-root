@@ -1,6 +1,18 @@
 #!/bin/bash
 # start.sh: the crowdsec container's entrypoint. CrowdSec's own (docker_start.sh), with
 # sso-allowlist.sh beside it. The reader is restarted if it exits; CrowdSec stays PID 1.
+
+# Our local scenarios (crowdsec/scenarios) into CrowdSec's scenarios directory, which
+# lives in the state volume: copied at every start, and a file we no longer ship is
+# removed (ours are the nsl-*.yaml ones; the hub's are links into its own tree).
+mkdir -p /etc/crowdsec/scenarios
+for f in /etc/crowdsec/scenarios/nsl-*.yaml; do
+    [ -e "$f" ] && [ ! -e "/etc/crowdsec-nsl/scenarios/${f##*/}" ] && rm -f "$f"
+done
+for f in /etc/crowdsec-nsl/scenarios/nsl-*.yaml; do
+    [ -e "$f" ] && cp "$f" /etc/crowdsec/scenarios/
+done
+
 (
     while true; do
         bash /etc/crowdsec-nsl/sso-allowlist.sh

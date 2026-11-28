@@ -1,0 +1,32 @@
+# nsl/http-crawl-non_statics: crowdsecurity/http-crawl-non_statics (hub v0.8), counting
+# only requests the box REFUSED. Installed by start.sh; the stock scenario runs in
+# simulation beside it (simulation.yaml), so it still shows what it would have banned.
+#
+# Why: the stock scenario counts any 40 distinct non-static GETs within ~20 s, whatever
+# the answer. A sync or media client that the app has authenticated does exactly that
+# and gets 200s: Seafile's /seafhttp/ block downloads banned an owner for 4 h on every
+# port (mestio, 2026-11-28). A crawler or scanner collects 404s, 401/403s and the gate's
+# 302 to its login page. On mestio's alerts this keeps every scanner the stock one
+# caught (8 of 10) and drops both false bans. It is the usual rule elsewhere too:
+# fail2ban's web jails and WAF rate rules ban on failures, never on success.
+#
+# Unchanged from the stock scenario but the status condition.
+type: leaky
+name: nsl/http-crawl-non_statics
+description: "Detect aggressive crawl on non static resources the box refused"
+filter: "evt.Meta.log_type in ['http_access-log', 'http_error-log'] && evt.Parsed.static_ressource == 'false' && evt.Parsed.verb in ['GET', 'HEAD'] && !(evt.Meta.http_status in ['200', '204', '206', '304'])"
+distinct: "evt.Parsed.file_name"
+leakspeed: 0.5s
+capacity: 40
+cache_size: 5
+groupby: "evt.Meta.source_ip + '/' + evt.Meta.target_fqdn"
+blackhole: 1m
+labels:
+  confidence: 1
+  spoofable: 0
+  classification:
+    - attack.T1595
+  behavior: "http:crawl"
+  service: http
+  label: "Aggressive Crawl"
+  remediation: true

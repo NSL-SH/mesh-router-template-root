@@ -1,5 +1,7 @@
 # Merged over CrowdSec's config.yaml (written by ensure-guard-stack.sh into
 # AppData/guard/crowdsec/nsl, mounted as /etc/crowdsec/config.yaml.local).
+config_paths:
+  simulation_path: /etc/crowdsec-nsl/simulation.yaml
 crowdsec_service:
   acquisition_dir: /etc/crowdsec-nsl/acquis.d
 api:
