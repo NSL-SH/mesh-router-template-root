@@ -57,6 +57,9 @@ services:
       # source is allowlisted on this box for SSO_ALLOW_DAYS.
       SSO_HOST: auth-${DOMAIN}
       SSO_ALLOW_DAYS: ${MESH_GUARD_SSO_ALLOW_DAYS:-90}
+      # Maison's dashboard hosts (ensure-guard-stack.sh): a request there whose response
+      # Maison marked X-Maison-Auth is a signed-in user, allowlisted the same way.
+      MAISON_HOSTS: ${GUARD_MAISON_HOSTS:-}
       # guard-sync's machine credential, registered by start.sh.
       SYNC_PASSWORD: ${GUARD_SYNC_PASSWORD}
     # The local API, for mesh-router-guard in the host netns. Loopback only.

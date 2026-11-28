@@ -418,7 +418,11 @@ routing_host_suffixes() {
 #          sessions and tokens);
 #   tls    the upstream serves HTTPS itself. Caddy does not verify its certificate:
 #          the hop stays on the box's docker network, the same trust the plain-HTTP
-#          upstreams get, and the upstream's certificate is its stack's own business.
+#          upstreams get, and the upstream's certificate is its stack's own business;
+#   authlog  copy the upstream's X-Maison-Auth response header into the access log as
+#          "maison_auth" (log_append): the signed-in signal sso-allowlist.sh reads.
+#          Maison's route only. The access log drops every header, so this is the
+#          one value of them that reaches it.
 #
 # The override's name is the one compose loads by itself, so a hand-run
 # `docker compose up` in the stack's folder, and Maison starting the stack, carry the
@@ -443,6 +447,9 @@ render_routing_override() {
                 upstream+="      caddy_N.reverse_proxy.transport: http"$'\n'
                 upstream+="      caddy_N.reverse_proxy.transport.tls_insecure_skip_verify: \"\""$'\n'
                 ;;
+        esac
+        case ",$opts," in
+            *,authlog,*) upstream+="      caddy_N.log_append: \"maison_auth {http.response.header.X-Maison-Auth}\""$'\n' ;;
         esac
         if [ -z "${count[$svc]+set}" ]; then
             services+=("$svc")

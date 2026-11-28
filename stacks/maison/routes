@@ -1,6 +1,7 @@
-# This stack's routes: <service>|<name>|<port>, one per line. Rendered on every
-# self-check into docker-compose.override.yml beside the deployed stack, once per
+# This stack's routes: <service>|<name>|<port>[|<options>], one per line. Rendered on
+# every self-check into docker-compose.override.yml beside the deployed stack, once per
 # routing domain of the box (routing_domains in scripts/library/common.sh), so the
 # compose file itself names no domain.
-# The AppShield gate: the only way into Maison.
-maison|maison|80
+# The AppShield gate: the only way into Maison. authlog: the access log keeps Maison's
+# X-Maison-Auth, the guard's signed-in signal (stacks/guard/crowdsec/sso-allowlist.sh).
+maison|maison|80|authlog

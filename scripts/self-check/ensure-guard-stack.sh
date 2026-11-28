@@ -82,9 +82,29 @@ if [ -z "$BACKEND_URL" ]; then
 fi
 mkdir -p "$GUARD_DIR/state/sync"
 
+# Maison's dashboard hosts, for sso-allowlist.sh: maison-<suffix> on every routing
+# domain and maison.<domain> (stacks/maison/routes), plus the Caddyfile's root sites
+# while they still serve Maison (DEFAULT_SERVICE_HOST). Exact names, never a pattern:
+# a store app called maison-x must not count.
+MAISON_HOSTS=""
+DOMAIN_VALUE="$(get_env_value DOMAIN)"
+IFS=',' read -ra suffixes <<<"$(routing_host_suffixes)"
+for suffix in "${suffixes[@]}"; do
+    [ -n "$suffix" ] && MAISON_HOSTS+="${MAISON_HOSTS:+,}maison-$suffix"
+done
+if [ -n "$DOMAIN_VALUE" ]; then
+    MAISON_HOSTS+="${MAISON_HOSTS:+,}maison.$DOMAIN_VALUE"
+    if [ "$(get_env_value DEFAULT_SERVICE_HOST)" = maison ]; then
+        MAISON_HOSTS+=",$DOMAIN_VALUE"
+        IP_DASH="$(get_env_value PUBLIC_IP_DASH)"
+        [ -n "$IP_DASH" ] && MAISON_HOSTS+=",$IP_DASH.sslip.io"
+    fi
+fi
+
 # --- deploy ------------------------------------------------------------------
 "$SCRIPTS_DIR/tools/deploy-stack.sh" guard "$GUARD_DIR" \
-    "GUARD_CONFIG_HASH=$CONFIG_HASH" "GUARD_BACKEND_URL=$BACKEND_URL" "GUARD_PROVIDER_STR=$PROVIDER_VALUE"
+    "GUARD_CONFIG_HASH=$CONFIG_HASH" "GUARD_BACKEND_URL=$BACKEND_URL" "GUARD_PROVIDER_STR=$PROVIDER_VALUE" \
+    "GUARD_MAISON_HOSTS=$MAISON_HOSTS"
 
 cd "$GUARD_DIR"
 if wait_stack_settled 90 15; then

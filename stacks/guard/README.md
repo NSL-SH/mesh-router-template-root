@@ -26,6 +26,17 @@ ranges and `MESH_GUARD_EXEMPT`. Design: the PCS edge-protection study
 A ban lasts 4 h, doubling on each repeat within CrowdSec's 7-day memory, capped at 7 days
 (`crowdsec/profiles.yaml`).
 
+**HTTP bans are for refused requests, never for successful ones**, as fail2ban's web jails and
+WAF rate rules do it. The one hub scenario that counted successes,
+`crowdsecurity/http-crawl-non_statics` (40 distinct non-static GETs in ~20 s, whatever the
+answer), runs in simulation (`crowdsec/simulation.yaml`): it still alerts, never bans, and is
+never reported. `nsl/http-crawl-non_statics` (`crowdsec/scenarios/`) replaces it with the same
+thresholds over requests answered anything but 200/204/206/304: 404s, 401/403s and the gates'
+302 to their login page. An authenticated sync or media client (Seafile's `/seafhttp/` blocks,
+which banned an owner on 2026-11-28) gets 200s and no longer counts; every scanner the stock
+scenario caught on that box did. Being an `nsl/` scenario, its bans stay on the box: the fleet
+report takes `crowdsecurity/*` only.
+
 ## The fleet list
 
 `guard-sync` runs every hour (backend: mesh-router-backend `Guard.ts`):
@@ -52,6 +63,15 @@ as its /64. `crowdsec/sso-allowlist.sh`, run beside CrowdSec, reads it from the 
 (Authelia or Yundera Login alike). Adding a source deletes its bans, so an owner banned on the
 direct path gets back in by signing in through the gateway name. Per box, never reported.
 
+A gate keeps its session for 30 days without going back to Dex, so the login alone records a
+source about once a month. The same list therefore also takes **signed-in Maison requests**:
+Maison answers `X-Maison-Auth: 1` when its gate passed it a user identity, Maison's routes
+(`stacks/maison/routes`, option `authlog`) and the Caddyfile's root sites copy it into the log
+as `maison_auth`, and the reader allowlists the source of any such line answered below 400, on
+every day the dashboard is used. Only on Maison's own hosts (`MAISON_HOSTS`, from
+`ensure-guard-stack.sh`): a store app can carry Caddy labels of its own and must not vouch for
+its visitors.
+
 The owner's own allowlist, `nsl-owner`, works the same way, for good or for a number of days:
 `scripts/tools/guard.sh allow <ip|cidr> [days]` (Mesh Console's Protection page).
 
@@ -70,7 +90,7 @@ Login attempts themselves are limited by Authelia (`regulation`, by user and by 
 
 | Path | Owner |
 |---|---|
-| `crowdsec/nsl/` | The template (`stacks/guard/crowdsec/`): acquisition, ban profiles, the `config.yaml.local` overlay, the entrypoint and the SSO allowlist reader. Rewritten every self-check; a change recreates `crowdsec` |
+| `crowdsec/nsl/` | The template (`stacks/guard/crowdsec/`): acquisition, ban profiles, local scenarios, the simulation list, the `config.yaml.local` overlay, the entrypoint and the SSO allowlist reader. Rewritten every self-check; a change recreates `crowdsec` |
 | `crowdsec/etc/`, `crowdsec/data/` | CrowdSec: hub, credentials, decision database. Deleting them starts it from scratch |
 | `state/` | mesh-router-guard: the backend's last gateway list, so enforcement survives a backend outage at boot |
 | `state/sync/sync.json` | guard-sync: the pinned list key and what its last report and import did |
