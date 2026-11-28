@@ -104,14 +104,24 @@ import /data/mesh-zone.caddy
 # The dashboard stays reachable at maison-${DOMAIN} regardless of this setting.
 # =============================================================================
 
+# The default service's signed-in marker into the access log as "maison_auth"
+# (Maison's X-Maison-Auth; empty for any other service): the guard's signed-in signal,
+# stacks/guard/crowdsec/sso-allowlist.sh. Same as the authlog route option, for the
+# two root addresses this file alone defines.
+(default_service_log) {
+    log_append maison_auth {http.response.header.X-Maison-Auth}
+}
+
 # Root domain: gateway CA, or its own DNS-01 certificate once delegated (zone_root_tls)
 {$DOMAIN} {
     import zone_root_tls
+    import default_service_log
     reverse_proxy {$DEFAULT_SERVICE_HOST}:{$DEFAULT_SERVICE_PORT}
 }
 
 # Root domain via sslip.io (Let's Encrypt)
 {$PUBLIC_IP_DASH}.sslip.io {
+    import default_service_log
     reverse_proxy {$DEFAULT_SERVICE_HOST}:{$DEFAULT_SERVICE_PORT}
 }
 
